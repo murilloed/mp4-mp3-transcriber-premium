@@ -1,0 +1,26 @@
+{
+  "name": "mp3-transcriber-premium",
+  "version": "2.0.0",
+  "description": "API Premium para transcrever áudio com Whisper localmente",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist uploads logs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "execa": "^9.0.0",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2"
+  }
+}

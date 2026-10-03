@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎙️ Transcritor Premium 2.0</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎙️ Transcritor Premium 2.0</h1>
+        <p>Transcreva áudio localmente com Whisper • Sem nuvem • Sem limite</p>
+      </header>
+
+      <div class="status-bar">
+        <span id="status-indicator" class="status-dot"></span>
+        <span id="status-text">Verificando ferramentas...</span>
+      </div>
+
+      <main>
+        <section class="upload-section">
+          <div class="drag-drop-area" id="drag-drop-area">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+            <h3>Arraste arquivos aqui</h3>
+            <p>ou clique para selecionar</p>
+            <input
+              type="file"
+              id="audio-input"
+              accept=".mp3,.wav,.m4a,.flac"
+              multiple
+              style="display: none"
+            />
+            <small>Formatos: MP3 • WAV • M4A • FLAC</small>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="model-select">Modelo Whisper</label>
+              <select id="model-select">
+                <option value="default">Carregando modelos...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="backend-select">Backend</label>
+              <select id="backend-select">
+                <option value="http://localhost:3000">Node.js (3000)</option>
+                <option value="http://localhost:5000">Python (5000)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button id="transcribe-btn" class="btn btn-primary">
+              <span class="btn-icon">🎙️</span>
+              Transcrever
+            </button>
+            <button id="batch-btn" class="btn btn-secondary">
+              <span class="btn-icon">📦</span>
+              Transcrever Lote
+            </button>
+            <button id="clear-btn" class="btn btn-outline">
+              <span class="btn-icon">🗑️</span>
+              Limpar
+            </button>
+          </div>
+
+          <div id="files-list" class="files-list" style="display: none">
+            <h4>Arquivos selecionados</h4>
+            <div id="files-items"></div>
+          </div>
+        </section>
+
+        <section id="results-section" class="results-section" style="display: none">
+          <div class="results-header">
+            <h2>📝 Resultado</h2>
+            <div class="button-group">
+              <button id="download-txt-btn" class="btn btn-small">⬇️ TXT</button>
+              <button id="download-json-btn" class="btn btn-small">⬇️ JSON</button>
+              <button id="copy-btn" class="btn btn-small">📋 Copiar</button>
+            </div>
+          </div>
+
+          <textarea
+            id="result-text"
+            placeholder="Transcrição aparecerá aqui..."
+            readonly
+          ></textarea>
+
+          <div id="metadata" class="metadata"></div>
+        </section>
+
+        <section id="batch-results" style="display: none" class="batch-results">
+          <div class="batch-header">
+            <h2>📦 Resultados do Lote</h2>
+            <button id="export-batch-btn" class="btn btn-small">⬇️ Exportar JSON</button>
+          </div>
+          <div id="batch-list" class="batch-list"></div>
+        </section>
+
+        <div id="loading" class="loading" style="display: none">
+          <div class="spinner"></div>
+          <p id="loading-text">Transcrevendo...</p>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <p id="progress-text" class="progress-text">0%</p>
+        </div>
+      </main>
+
+      <footer>
+        <p>✅ Processamento 100% local • Sem envio de dados • Sem limite de tempo</p>
+        <p style="font-size: 0.9rem; opacity: 0.7; margin-top: 8px;">
+          Versão 2.0 Premium • Node.js + Python • Frontend Melhorado
+        </p>
+      </footer>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
