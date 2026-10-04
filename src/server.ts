@@ -5,6 +5,7 @@ import fs from "fs/promises";
 import path from "path";
 import {
   transcribeAudio,
+  SUPPORTED_FORMATS,
   validateTools,
   getAvailableModels,
 } from "./transcribe.js";
@@ -18,6 +19,22 @@ const MODELS_DIR = "./models";
 
 app.use(express.json());
 app.use(express.static("public"));
+
+type Progress = { percent: number; stage: string; updatedAt: number };
+const progressJobs = new Map<string, Progress>();
+function reportProgress(id: string, percent: number, stage: string) {
+  if (id) progressJobs.set(id, { percent, stage, updatedAt: Date.now() });
+}
+const cleanupProgress = setInterval(() => {
+  for (const [id, progress] of progressJobs) {
+    if (Date.now() - progress.updatedAt > 24 * 60 * 60 * 1000) progressJobs.delete(id);
+  }
+}, 60000);
+cleanupProgress.unref();
+app.get("/api/progress/:id", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(progressJobs.get(req.params.id) || { percent: 0, stage: "Recebendo arquivo..." });
+});
 
 app.get("/health", async (_req, res) => {
   const tools = await validateTools();
@@ -45,17 +62,16 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
     }
 
     const ext = path.extname(req.file.originalname).toLowerCase();
-    const supportedFormats = [".mp3", ".wav", ".m4a", ".flac"];
 
-    if (!supportedFormats.includes(ext)) {
+    if (!SUPPORTED_FORMATS.includes(ext)) {
       await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({
-        error: `Formato não suportado. Use: ${supportedFormats.join(", ")}`,
+        error: `Formato não suportado. Use: ${SUPPORTED_FORMATS.join(", ")}`,
       });
     }
 
     const modelPath = req.body.model || MODEL_PATH;
-    const result = await transcribeAudio(req.file.path, modelPath);
+    const result = await transcribeAudio(req.file.path, modelPath, req.file.originalname, (percent, stage) => reportProgress(String(req.query.job || ""), percent, stage));
 
     await fs.unlink(req.file.path).catch(() => {});
 
@@ -86,11 +102,11 @@ app.post("/api/batch-transcribe", upload.array("audios", 10), async (req, res) =
 
     const results = [];
 
-    for (const file of req.files as Express.Multer.File[]) {
+    const files = req.files as Express.Multer.File[];
+    for (const [index, file] of files.entries()) {
       const ext = path.extname(file.originalname).toLowerCase();
-      const supportedFormats = [".mp3", ".wav", ".m4a", ".flac"];
 
-      if (!supportedFormats.includes(ext)) {
+      if (!SUPPORTED_FORMATS.includes(ext)) {
         await fs.unlink(file.path).catch(() => {});
         results.push({
           filename: file.originalname,
@@ -101,7 +117,7 @@ app.post("/api/batch-transcribe", upload.array("audios", 10), async (req, res) =
       }
 
       const modelPath = req.body.model || MODEL_PATH;
-      const result = await transcribeAudio(file.path, modelPath);
+      const result = await transcribeAudio(file.path, modelPath, file.originalname, (percent, stage) => reportProgress(String(req.query.job || ""), (index * 100 + percent) / files.length, `Arquivo ${index + 1}/${files.length}: ${stage}`));
 
       await fs.unlink(file.path).catch(() => {});
 

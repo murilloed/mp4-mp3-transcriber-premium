@@ -12,11 +12,13 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+WHISPER_PATH = os.getenv('WHISPER_PATH', 'whisper-cpp')
+
 PORT = int(os.getenv('PORT', 5000))
 MODEL_PATH = os.getenv('MODEL_PATH', './models/ggml-base.bin')
 MODELS_DIR = './models'
 UPLOAD_FOLDER = './uploads'
-ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'flac'}
+ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'flac', 'mp4'}
 
 Path(UPLOAD_FOLDER).mkdir(exist_ok=True)
 Path(MODELS_DIR).mkdir(exist_ok=True)
@@ -26,7 +28,7 @@ def allowed_file(filename):
 
 def check_tool(tool_name):
     try:
-        command = [tool_name, '--version'] if tool_name == 'ffmpeg' else [tool_name, '--help']
+        command = [tool_name, '--version'] if tool_name == 'ffmpeg' else [WHISPER_PATH, '--help']
         subprocess.run(command, capture_output=True, check=True, timeout=5)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -47,12 +49,12 @@ def transcribe_audio(input_path, model_path):
 
             subprocess.run([
                 'ffmpeg', '-y', '-i', input_path,
-                '-ac', '1', '-ar', '16000',
+                '-map', '0:a:0', '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le',
                 wav_path
             ], capture_output=True, check=True, timeout=300)
 
             subprocess.run([
-                'whisper-cpp', '-m', model_path, '-f', wav_path,
+                WHISPER_PATH, '-m', model_path, '-f', wav_path,
                 '-otxt', '-of', output_base
             ], capture_output=True, check=True, timeout=600)
 

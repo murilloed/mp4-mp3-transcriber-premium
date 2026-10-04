@@ -57,11 +57,11 @@ audioInput.addEventListener('change', (e) => {
 function handleFileSelection(files) {
   selectedFiles = files.filter(f => {
     const ext = f.name.split('.').pop().toLowerCase();
-    return ['mp3', 'wav', 'm4a', 'flac'].includes(ext);
+    return ['mp3', 'wav', 'm4a', 'flac', 'mp4'].includes(ext);
   });
 
   if (selectedFiles.length === 0) {
-    alert('Selecione arquivos de áudio válidos (MP3, WAV, M4A, FLAC)');
+    alert('Selecione arquivos válidos (MP3, WAV, M4A, FLAC, MP4 com áudio)');
     return;
   }
 
@@ -106,7 +106,7 @@ clearBtn.addEventListener('click', () => {
 
 transcribeBtn.addEventListener('click', async () => {
   if (selectedFiles.length === 0) {
-    alert('Selecione um arquivo de áudio.');
+    alert('Selecione um arquivo de áudio ou vídeo MP4.');
     return;
   }
   await performTranscription([selectedFiles[0]]);
@@ -114,7 +114,7 @@ transcribeBtn.addEventListener('click', async () => {
 
 batchBtn.addEventListener('click', async () => {
   if (selectedFiles.length === 0) {
-    alert('Selecione pelo menos um arquivo de áudio.');
+    alert('Selecione pelo menos um arquivo de áudio ou vídeo MP4.');
     return;
   }
   if (selectedFiles.length === 1) {
@@ -163,10 +163,41 @@ async function loadModels() {
   }
 }
 
+function setProgress(percent) {
+  progressFill.style.width = percent + '%';
+  progressText.textContent = Math.round(percent) + '%';
+}
+function trackProgress(job) {
+  const started = Date.now();
+  let stage = 'Enviando arquivo...';
+  let stopped = false;
+  let polling = false;
+  const timer = setInterval(async () => {
+    const seconds = Math.floor((Date.now() - started) / 1000);
+    loadingText.textContent = stage + ' • ' + Math.floor(seconds / 60) + 'min ' + (seconds % 60) + 's';
+    if (backendUrl !== 'http://localhost:3000') {
+      progressText.textContent = 'Processando • progresso indisponível neste backend';
+      return;
+    }
+    if (polling) return;
+    polling = true;
+    try {
+      const response = await fetch(backendUrl + '/api/progress/' + job);
+      if (response.ok) {
+        const data = await response.json();
+        if (!stopped) { stage = data.stage; setProgress(data.percent); }
+      }
+    } catch {} finally { polling = false; }
+  }, 1000);
+  return () => { stopped = true; clearInterval(timer); };
+}
+
 async function performTranscription(files) {
   loading.style.display = 'flex';
   loadingText.textContent = 'Transcrevendo...';
-  progressFill.style.width = '0%';
+  setProgress(0);
+  const job = crypto.randomUUID();
+  const stopProgress = trackProgress(job);
   resultsSection.style.display = 'none';
   batchResults.style.display = 'none';
 
@@ -180,14 +211,11 @@ async function performTranscription(files) {
   }
 
   try {
-    progressFill.style.width = '30%';
-
-    const response = await fetch(`${backendUrl}/api/transcribe`, {
+    const response = await fetch(`${backendUrl}/api/transcribe?job=${job}`, {
       method: 'POST',
       body: formData,
     });
 
-    progressFill.style.width = '70%';
     const data = await response.json();
 
     if (!response.ok) {
@@ -217,11 +245,13 @@ async function performTranscription(files) {
     `;
 
     metadata.innerHTML = metadataHTML;
-    progressFill.style.width = '100%';
+    stopProgress();
+    setProgress(100);
     resultsSection.style.display = 'block';
   } catch (error) {
     alert(`Erro: ${error.message}`);
   } finally {
+    stopProgress();
     setTimeout(() => {
       loading.style.display = 'none';
     }, 500);
@@ -231,7 +261,9 @@ async function performTranscription(files) {
 async function performBatchTranscription(files) {
   loading.style.display = 'flex';
   loadingText.textContent = `Transcrevendo lote (0/${files.length})...`;
-  progressFill.style.width = '0%';
+  setProgress(0);
+  const job = crypto.randomUUID();
+  const stopProgress = trackProgress(job);
   resultsSection.style.display = 'none';
   batchResults.style.display = 'none';
 
@@ -244,14 +276,11 @@ async function performBatchTranscription(files) {
   }
 
   try {
-    progressFill.style.width = '30%';
-
-    const response = await fetch(`${backendUrl}/api/batch-transcribe`, {
+    const response = await fetch(`${backendUrl}/api/batch-transcribe?job=${job}`, {
       method: 'POST',
       body: formData,
     });
 
-    progressFill.style.width = '70%';
     const data = await response.json();
 
     if (!response.ok) {
@@ -270,11 +299,13 @@ async function performBatchTranscription(files) {
       </div>
     `).join('');
 
-    progressFill.style.width = '100%';
+    stopProgress();
+    setProgress(100);
     batchResults.style.display = 'block';
   } catch (error) {
     alert(`Erro: ${error.message}`);
   } finally {
+    stopProgress();
     setTimeout(() => {
       loading.style.display = 'none';
     }, 500);

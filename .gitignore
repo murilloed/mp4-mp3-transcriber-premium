@@ -7,3 +7,6 @@ logs/*.log
 .env
 .DS_Store
 *.db
+
+tools/whisper/
+tools/whisper.zip
